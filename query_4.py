@@ -57,7 +57,7 @@ with open('restaurants_60601-60606.csv', newline='', encoding='utf8') as rev:
 # for key, val in restaurant_data.items():
 #     print(key, val)
 
-with open('Food_Inspections.csv', newline='', encoding='utf8') as rev:
+with open('Food_Inspections (1).csv', newline='', encoding='utf8') as rev:
     r = csv.reader(rev, delimiter=',')
     i = 0
     for key, val in restaurant_data.items():
@@ -74,18 +74,23 @@ with open('Food_Inspections.csv', newline='', encoding='utf8') as rev:
         conditional_inspection = 0
         rev.seek(0)
         for row in r:
-            name2 = row[1].strip()
-            address2 = row[5].strip()
-
-            if (jaccard(address1, address2) >= 0.9 and jaccard(name1, name2) >= 0.4) or (jaccard(address1, address2) >= 0.5 and jaccard(name1, name2) >= 0.5):
+            name2 = row[0].strip()
+            address2 = row[1].strip()
+            if name1[:1] == name2[:1]:
+                flag = 1
+            else:
+                if flag == 1:
+                    break
+            if jaccard(address1, address2) >= 0.6 and jaccard(name1, name2) >= 0.4:
                 print(name1, name2, address1, address2)
-                result = row[9].strip().lower()
+                result = row[3].strip().lower()
                 if "pass" in result and "conditions" in result:
                     conditional_inspection += 1
                 elif "pass" in result:
                     pass_inspection += 1
                 elif "fail" in result:
                     fail_inspection += 1
+
 
         restaurant_data[key].append(pass_inspection)
         restaurant_data[key].append(conditional_inspection)
