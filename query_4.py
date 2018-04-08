@@ -81,7 +81,14 @@ with open('Food_Inspections (1).csv', newline='', encoding='utf8') as rev:
             else:
                 if flag == 1:
                     break
-            if jaccard(address1, address2) >= 0.6 and jaccard(name1, name2) >= 0.4:
+            try:
+                if name1[:4].lower() != name2[:4].lower():
+                    continue
+                elif jaccard(name1, name2) < 0.4:
+                    continue
+            except IndexError:
+                print('Index error')
+            if jaccard(address1, address2) >= 0.6:
                 print(name1, name2, address1, address2)
                 result = row[3].strip().lower()
                 if "pass" in result and "conditions" in result:

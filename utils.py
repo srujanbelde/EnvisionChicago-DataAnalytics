@@ -54,10 +54,12 @@ def jaccard_chars(s1, s2):
 
 
 def address_refine(str1):
+    str1 = str1.lower()
+    str1 = address_replace(str1)
     ad = str1.split()
     s = ""
     try:
-        for x in ["st", "dr", "ave", "pl", "pky", "blvd"]:
+        for x in ["st", "dr", "ave", "pl", "pky", "blvd", "ct"]:
             if x in ad[2].lower().strip():
                 for n in range(0, 3):
                     s += ad[n] + " "
@@ -72,12 +74,7 @@ def address_refine(str1):
 
 def replacing(a):
     a = a.lower()
-    a = a.replace('avenue', 'ave')
-    a = a.replace('street', 'st')
-    a = a.replace('boulevard', 'blvd')
-    a = a.replace('parkway', 'pky')
-    a = a.replace('place', 'pl')
-    a = a.replace('drive', 'dr')
+    a = address_replace(a)
     a = a.replace('\'', '')
     a = a.replace('and', '&')
     a = a.replace('express', 'exp')
@@ -86,6 +83,17 @@ def replacing(a):
     a = a.replace('union station', 'usn')
     a = a.replace('cafe', 'cf')
     a = a.replace('  ', ' ')
+    return a
+
+
+def address_replace(a):
+    a = a.replace('avenue', 'ave')
+    a = a.replace('street', 'st')
+    a = a.replace('court', 'ct')
+    a = a.replace('boulevard', 'blvd')
+    a = a.replace('parkway', 'pky')
+    a = a.replace('place', 'pl')
+    a = a.replace('drive', 'dr')
     return a
 
 
