@@ -1,5 +1,6 @@
 import pandas as pd
 import pandasql as ps
+import numpy as np
 import re
 
 from difflib import SequenceMatcher
@@ -107,14 +108,15 @@ def myFun(x):
 
 
 def crimes():
-    df = pd.read_csv(data_path, nrows=5000000)
+    df = pd.read_csv(data_path, nrows=500000)
     df.columns = [c.replace(' ', '_') for c in df.columns]
     biz = main()
-    df2 = df[['Block','Primary_Type','Arrest','Date']]
+    df2 = df[['Block','Primary_Type','Arrest','Date','Latitude','Longitude']]
     df2['Block'] = df2["Block"].apply(lambda x: l_fun(x))
     df2['Date'] = df2["Date"].apply(lambda x: x.split("/")[2].split(" ")[0])
 
-    df2 = pd.DataFrame({'ArrestCount': df2.groupby(['Block','Primary_Type','Date','Arrest']).size()}).reset_index()
+    df2 = pd.DataFrame({'ArrestCount': df2.groupby(['Block','Primary_Type','Date','Arrest','Latitude','Longitude']).size()}).reset_index()
+    df2.loc[df2['Arrest'] == False, 'ArrestCount'] = 0
 
     #df2 = df2.sort_values('count')
     print(df2)
@@ -159,7 +161,7 @@ def main2():
             tempFrame = tempFrame[biz_frame['ADDRESS'].str.lower().str.contains(x[2], na =False)]
             name = df.at[row, 'name'][:3]
             name = name.lower()
-            tempFrame = tempFrame[biz_frame['DOING_BUSINESS_AS_NAME'].str.lower().str.contains(name, na =False)]
+            tempFrame = tempFrame[biz_frame['DOING_BUSINESS_AS_NAME'].str.lower().str.startswith(name, na =False)]
             # ddd = pd.DataFrame({'count': df2.groupby(["LEGAL_NAME", "DOING_BUSINESS_AS_NAME", 'ADDRESS','LICENSE_DESCRIPTION','ZIP_CODE']).size()}).reset_index()
 
             tempFrame = pd.DataFrame({'total': tempFrame.groupby(["ADDRESS","DOING_BUSINESS_AS_NAME","LICENSE_DESCRIPTION"]).size()}).reset_index()
@@ -176,21 +178,71 @@ def main2():
                     df.at[row, "licence_description"] = tempFrame.at[t_rows, 'LICENSE_DESCRIPTION']
                     new_df = new_df.append(df.loc[[row]])
                     ff =ff+ 1
-                    break
+                    #break
 
     print(new_df)
     crime_frame = crimes()
 
-    cr = crime_frame[crime_frame['Block'] == "001xx s wacker dr"]
-    merged = pd.merge(crime_frame, new_df, on=['Block','Block'])
-    print(merged)
+    final_frame = pd.DataFrame(columns=['Year','Business_Type','Business_Name', 'Address', 'Has_Tobacco_License'
+                                        ,'Has_Liquor_License','Crime_Type','#Crimes','#Arrests','#OnPremises'])
+
+    rest_names = new_df['name'].unique()
+    rest_names = rest_names.tolist()
+
+
+
+
+    for restaurant in rest_names:
+
+        temp_rest_data = new_df[new_df['name'] == restaurant]
+
+        check_license = temp_rest_data[temp_rest_data['licence_description'].str.contains("Liquor")].size > 0
+        check_license1 = temp_rest_data[temp_rest_data['licence_description'].str.contains("Food")].size > 0
+
+        temp_rest_data = temp_rest_data.iloc[0]
+
+        temp_crime_frame = crime_frame[crime_frame['Block'] == temp_rest_data['Block']]
+        lat = temp_crime_frame.iloc[0]['Latitude']
+        long = temp_crime_frame.iloc[0]['Longitude']
+        maxLat = lat + 0.000
+        minLat = lat - 0.000
+        maxLong = long + 0.000
+        minLong = long - 0.000
+        blocks_3_crimes = crime_frame[crime_frame['Block'] == temp_rest_data['Block']]
+        #blocks_3_crimes = crime_frame[(crime_frame['Latitude'] >= minLat) & (crime_frame['Latitude'] <= maxLat) & (crime_frame['Longitude'] <= minLong) & (crime_frame['Longitude'] <= maxLong)]
+        blocks_3_crimes1 = pd.DataFrame({'total': blocks_3_crimes.groupby(["Block", "Primary_Type", "Date"]).size()}).reset_index()
+        blocks_3_crimes = blocks_3_crimes.groupby(['Block', 'Primary_Type', 'Date'], as_index=False)[["ArrestCount"]].sum()
+
+
+
+"""
+        rest_series = row[1]
+        name = rest_series['name']
+        block = rest_series['Block']
+        address = rest_series['matched_address']
+        biz_type = rest_series['categories']
+"""
+        #crime_data = crime_frame[crime_frame['Block'] == block]
+
+
+
+
+
+        #print(row)
+
+
+
+
+
+        #merged = pd.merge(crime_frame, new_df, on=['Block','Block'])
+        #print(merged)
 
 
             #t_rows[]
 
 
 
-    print("done!!!!")
+        #print("done!!!!")
 
 
 
