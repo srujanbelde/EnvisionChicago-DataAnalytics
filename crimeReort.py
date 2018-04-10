@@ -57,19 +57,12 @@ rest_path = "data/restaurants_60601-60606.csv"
 def main():
     df = pd.read_csv(data_path2, nrows=5000000)
     #print(df)
-
     #q1 = """SELECT 'LEGAL NAME', count('LEGAL NAME') FROM df group by 'LEGAL NAME' """
     #print(ps.sqldf(q1, locals()))
     #print(df)
-    a = 1
-    b = a
-    b= 2
-
-
-
     #df3 = pd.DataFrame(df)
-    df.columns = [c.replace(' ', '_') for c in df.columns]
 
+    df.columns = [c.replace(' ', '_') for c in df.columns]
     df2 = df[['LEGAL_NAME','DOING_BUSINESS_AS_NAME','ADDRESS','LICENSE_DESCRIPTION','ZIP_CODE']]
 
     #df1 = df.groupby(['LEGAL_NAME','DOING_BUSINESS_AS_NAME','ADDRESS','LICENSE_DESCRIPTION','ZIP_CODE']).size().to_frame()
@@ -108,9 +101,9 @@ def myFun(x):
 
 
 def crimes():
-    df = pd.read_csv(data_path, nrows=500000)
+    df = pd.read_csv(data_path, nrows=5000000)
     df.columns = [c.replace(' ', '_') for c in df.columns]
-    biz = main()
+    #biz = main()
     df2 = df[['Block','Primary_Type','Arrest','Date','Latitude','Longitude']]
     df2['Block'] = df2["Block"].apply(lambda x: l_fun(x))
     df2['Date'] = df2["Date"].apply(lambda x: x.split("/")[2].split(" ")[0])
@@ -136,7 +129,7 @@ def main2():
 
     biz_frame = main()
     print(biz_frame.shape)
-    df = pd.read_csv(rest_path, nrows=50)
+    df = pd.read_csv(rest_path, nrows=5000)
     df.columns = [c.replace(' ', '_') for c in df.columns]
     df = df[['name', 'address', 'categories']]
     df['address'] = df['address'].apply(lambda x: address_refine(x))
@@ -151,7 +144,9 @@ def main2():
     gg = 0
     hh = 0
     regex = "[^ a-zA-Z0-9]"
+    loopC=0
     for row in df.index:
+        loopC = loopC + 1
 
         x = df.at[row,'address'].lower().split(" ")
         if len(x)>3:
@@ -183,8 +178,9 @@ def main2():
     print(new_df)
     crime_frame = crimes()
 
-    final_frame = pd.DataFrame(columns=['Year','Business_Type','Business_Name', 'Address', 'Has_Tobacco_License'
-                                        ,'Has_Liquor_License','Crime_Type','#Crimes','#Arrests','#OnPremises'])
+    #final_frame = pd.DataFrame(columns=['Year','Business_Type','Business_Name', 'Address', 'Has_Tobacco_License'
+     #                                   ,'Has_Liquor_License','Crime_Type','#Crimes','#Arrests','#OnPremises'])
+    final_frame = pd.DataFrame()
 
     rest_names = new_df['name'].unique()
     rest_names = rest_names.tolist()
@@ -197,22 +193,42 @@ def main2():
         temp_rest_data = new_df[new_df['name'] == restaurant]
 
         check_license = temp_rest_data[temp_rest_data['licence_description'].str.contains("Liquor")].size > 0
-        check_license1 = temp_rest_data[temp_rest_data['licence_description'].str.contains("Food")].size > 0
+        check_license1 = temp_rest_data[temp_rest_data['licence_description'].str.contains("Tobacco")].size > 0
+
+
 
         temp_rest_data = temp_rest_data.iloc[0]
 
-        temp_crime_frame = crime_frame[crime_frame['Block'] == temp_rest_data['Block']]
-        lat = temp_crime_frame.iloc[0]['Latitude']
-        long = temp_crime_frame.iloc[0]['Longitude']
-        maxLat = lat + 0.000
-        minLat = lat - 0.000
-        maxLong = long + 0.000
-        minLong = long - 0.000
-        blocks_3_crimes = crime_frame[crime_frame['Block'] == temp_rest_data['Block']]
-        #blocks_3_crimes = crime_frame[(crime_frame['Latitude'] >= minLat) & (crime_frame['Latitude'] <= maxLat) & (crime_frame['Longitude'] <= minLong) & (crime_frame['Longitude'] <= maxLong)]
-        blocks_3_crimes1 = pd.DataFrame({'total': blocks_3_crimes.groupby(["Block", "Primary_Type", "Date"]).size()}).reset_index()
-        blocks_3_crimes = blocks_3_crimes.groupby(['Block', 'Primary_Type', 'Date'], as_index=False)[["ArrestCount"]].sum()
+        temp_rest_data['has_liqour_license'] = check_license
+        temp_rest_data['has_Tobacco_license'] = check_license1
 
+        temp_crime_frame = crime_frame[crime_frame['Block'] == temp_rest_data['Block']]
+
+        if temp_crime_frame.size > 0:
+
+            lat = temp_crime_frame.iloc[0]['Latitude']
+            long = temp_crime_frame.iloc[0]['Longitude']
+            maxLat = lat + 0.00004000
+            minLat = lat - 0.00004000
+            maxLong = long + 0.00000000004000
+            minLong = long - 0.00000000004000
+            #blocks_3_crimes = crime_frame[crime_frame['Block'] == temp_rest_data['Block']]
+            blocks_3_crimes = crime_frame[(crime_frame['Latitude'] >= minLat) & (crime_frame['Latitude'] <= maxLat) & (crime_frame['Longitude'] <= minLong) & (crime_frame['Longitude'] <= maxLong)]
+            if blocks_3_crimes.size > 0:
+                blocks_3_crimes1 = pd.DataFrame({'total': blocks_3_crimes.groupby(["Primary_Type", "Date"]).size()}).reset_index()
+                blocks_3_crimes = blocks_3_crimes.groupby(['Primary_Type', 'Date'], as_index=False)[["ArrestCount"]].sum()
+                blocks_3_crimes = pd.merge(blocks_3_crimes, blocks_3_crimes1, on=['Primary_Type','Date'])
+                on_prem_crimes = crime_frame[crime_frame['Block'] == temp_rest_data['Block']]
+
+                if on_prem_crimes.size > 0:
+                    on_prem_crimes = pd.DataFrame({'onPrem': on_prem_crimes.groupby(["Block", "Primary_Type", "Date"]).size()}).reset_index()
+                    merged2 = pd.merge(blocks_3_crimes, on_prem_crimes, on=['Primary_Type','Date'])
+
+                    rest_main_df = pd.DataFrame(temp_rest_data).transpose()
+                    final_loop_merge = pd.merge(rest_main_df, merged2, on=['Block'])
+                    final_frame = final_frame.append(final_loop_merge)
+
+    final_frame.to_csv('test.csv', encoding='utf-8', index=False)
 
 
 """
